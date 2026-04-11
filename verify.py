@@ -6,7 +6,7 @@ MATRICES_FOLDER = ".\\matrices"
 
 
 def main() -> None:
-    sizes = [100, 200, 400, 800, 1200, 1600, 2000]
+    sizes = [200, 400, 800, 1200, 1600, 2000]
     threads = [1, 2, 4, 8]
 
     for el in threads:

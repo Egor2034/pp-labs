@@ -6,12 +6,17 @@
 #include <windows.h>
 #include <chrono>
 #include <math.h>
+#include <mpi.h>
 #include "matrix.hpp"
 
 const std::string RESULTS_FOLDER = ".\\matrices\\results";
 const std::string MATRICES_FOLDER = ".\\matrices";
 
-void save_info(std::string path, size_t matrix_size, size_t num_threads, std::chrono::milliseconds duration) {
+void save_info(std::string path, size_t matrix_size, int num_threads, std::chrono::milliseconds duration) {
+	int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank != 0) return;
+
 	std::ofstream file;
 
 	file.open(path, std::ios::app);
@@ -31,35 +36,47 @@ void save_info(std::string path, size_t matrix_size, size_t num_threads, std::ch
 	 
 }
 
-int main() {
+int main(int argc, char** argv) {
+	MPI_Init(&argc, &argv);
+
 	SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
     setlocale(LC_ALL, "ru_RU.UTF-8");
-
+	
 	try{
-		int sizes[] = {100, 200, 400, 800, 1200, 1600, 2000};
-		int num_of_threads[] = {1, 2, 4, 8};
+		int world_size;
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+        int world_rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 		
-		for (int el : num_of_threads) {
-			for (int size : sizes) {
-				omp_set_num_threads(el);
-				Matrix<float> matrix_a = read_from_file<float>(std::format("{}\\matrixA{}x{}.txt", MATRICES_FOLDER, size, size));
-				Matrix<float> matrix_b = read_from_file<float>(std::format("{}\\matrixB{}x{}.txt", MATRICES_FOLDER, size, size));
+		size_t sizes[] = {200, 400, 800, 1200, 1600, 2000};
 
-				auto start = std::chrono::high_resolution_clock::now();
+		for (size_t size : sizes) {
+			Matrix<float> matrix_a = read_from_file<float>(std::format("{}\\matrixA{}x{}.txt", MATRICES_FOLDER, size, size));
+			Matrix<float> matrix_b = read_from_file<float>(std::format("{}\\matrixB{}x{}.txt", MATRICES_FOLDER, size, size));
 
-				Matrix<float> result = matrix_a * matrix_b;
+			MPI_Barrier(MPI_COMM_WORLD);
+			auto start = std::chrono::high_resolution_clock::now();
 
-				auto end = std::chrono::high_resolution_clock::now();
-				auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-				
-				save_to_file(result, std::format("{}\\result{}x{}_{}.txt", RESULTS_FOLDER, size, size, el));
-				save_info("info.txt", matrix_a.rows(), el, duration);
+			Matrix<float> result = matrix_a.mpi_mult(matrix_b);
+
+			MPI_Barrier(MPI_COMM_WORLD);
+			auto end = std::chrono::high_resolution_clock::now();
+
+			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+			
+			if (world_rank == 0) {
+				save_to_file<float>(result, std::format("{}\\result{}x{}_{}.txt", RESULTS_FOLDER, size, size, world_size));
+				save_info("info.txt", size, world_size, duration);
 			}
-		}
+                
+				
+			}
 	}
 	catch (std::exception& ex){
 		std::cout << ex.what();
 	}
+
+	MPI_Finalize();
 	return 0;
 }

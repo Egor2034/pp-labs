@@ -1,26 +1,18 @@
 cmake_minimum_required(VERSION 3.12)
-project("lab2" LANGUAGES CXX)
+project("lab3" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable("lab2" "main.cpp")
+add_executable("lab3" "main.cpp" "matrix.hpp")
 
-find_package(OpenMP REQUIRED)
-target_link_libraries("lab2" PRIVATE OpenMP::OpenMP_CXX)
-target_compile_options("lab2" PRIVATE ${OpenMP_CXX_FLAGS})
 
-if(MSVC)
-    target_link_options("lab2" PRIVATE "/STACK:67108864") 
-else()
-    target_link_options("lab2" PRIVATE "-Wl,--stack,67108864")  
-endif()
+target_include_directories("lab3" PRIVATE "C:/Program Files (x86)/Microsoft SDKs/MPI/Include")
+target_link_directories("lab3" PRIVATE "C:/Program Files (x86)/Microsoft SDKs/MPI/Lib/x64")
+target_link_libraries("lab3"PRIVATE msmpi)
+    
+target_link_options("lab3" PRIVATE "/STACK:134217728")
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options("lab2" PRIVATE /W4)
-else()
-    target_compile_options("lab2" PRIVATE -Wall -Wextra -Wpedantic)
-endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -DDEBUG")
