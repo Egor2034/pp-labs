@@ -10,14 +10,12 @@
 template <typename T> requires std::is_arithmetic_v<T>
 class Matrix {
 private:
-	size_t _rows, _columns;
-	T** _data;
-
-	static size_t _total_operations;
+	T* _data;
+	size_t _size;
 
 	friend std::ostream& operator<<(std::ostream& os, const Matrix<T>& other) {
-		for (size_t i = 0; i < other.rows(); i++) {
-			for (size_t j = 0; j < other.columns(); j++) {
+		for (size_t i = 0; i < other.size(); i++) {
+			for (size_t j = 0; j < other.size(); j++) {
 				os << other(i, j) << " ";
 			}
 			os << "\n";
@@ -26,76 +24,56 @@ private:
 		return os;
 	}
 public:
-	Matrix() {
-		_rows = 0;
-		_columns = 0;
-		_data = nullptr;
+	Matrix(size_t size) {
+		_size = size;
+		_data = new T[size * size]();
 	}
 
-	Matrix(size_t rows, size_t columns) : _rows(rows), _columns(columns) {
-		_data = new T*[_rows];
+	Matrix(const Matrix<T>& other) {
+		_size = other._size;
+		_data = new T[_size * _size]();
 
-		for (size_t i = 0; i < _rows; i++) {
-			_data[i] = new T[_columns]();
-		}
-	}
-
-	Matrix(const Matrix<T>& other) : Matrix(other.rows(), other.columns()) {
-		for (size_t i = 0; i < _rows; i++) {
-			for (size_t j = 0; j < _columns; j++) {
-				_data[i][j] = other(i, j);
-			}
+		for (size_t i = 0; i < _size * _size; i++) {
+			_data[i] = other._data[i];
 		}
 	}
 
 	~Matrix() {
-		for (size_t i = 0; i < _rows; i++) {
-			delete[] _data[i];
-		}
 		delete[] _data;
 	}
 
 	void print() const {
-		for (size_t i = 0; i < _rows; i++) {
-			for (size_t j = 0; j < _columns; j++) {
-				std::cout << _data[i][j] << " ";
+		for (size_t i = 0; i < _size; i++) {
+			for (size_t j = 0; j < _size; j++) {
+				std::cout << _data[i * _size + j] << " ";
 			}
 			std::cout << "\n";
 		}
 	}
 
 	void fill() {
-		for (size_t i = 0; i < _rows; i++) {
-			for (size_t j = 0; j < _columns; j++) {
-				std::cin >> _data[i][j];
-			}
+		for (size_t i = 0; i < _size * _size; i++) {
+			std::cin >> _data[i];
 		}
 	}
 
-	size_t rows() const { return _rows; }
-	size_t columns() const { return _columns; }
-	static size_t total_operations() { return _total_operations; }
+	size_t size() { return _size; }
 
 	T& operator()(size_t row, size_t column) {
-		return _data[row][column];
+		return _data[row * _size + column];
 	}
 
 	const T& operator()(size_t row, size_t column) const {
-		return _data[row][column];
+		return _data[row * _size + column];
 	}
 
 	Matrix operator*(const Matrix<T>& other) const {
-		if (_columns != other.rows()) {
-			throw std::invalid_argument("Число столбцов первой матрицы должно быть равно числу строк второй!");
-		}
+		Matrix<T> matr(_size);
 
-		Matrix<T> matr(_rows, other.columns());
-
-		for (size_t i = 0; i < _rows; i++) {
-			for (size_t j = 0; j < other.columns(); j++) {
-				for (size_t k = 0; k < _columns; k++) { 
-					matr(i, j) += _data[i][k] * other(k, j);
-					_total_operations += 2;
+		for (int i = 0; i < _size; i++) {
+			for (int j = 0; j < _size; j++) {
+				for (int k = 0; k < _size; k++) { 
+					matr(i, j) += _data[i * _size + k] *  other._data[k * _size + j];
 				}
 			}
 		}
@@ -103,10 +81,10 @@ public:
 		return matr;
 	}
 
+	T* data() { return _data; }
+	
+    const T* data() const { return _data; }
 };
-
-template <typename T> requires std::is_arithmetic_v<T>
-size_t Matrix<T>::_total_operations = 0;
 
 template <typename T> requires std::is_arithmetic_v<T>
 Matrix<T> read_from_file(std::string path) {
@@ -121,15 +99,13 @@ Matrix<T> read_from_file(std::string path) {
 	
 	size_t rows, columns;
 	file >> rows >> columns;
-	Matrix<T> matrix(rows, columns);
+	Matrix<T> matrix(rows);
 
-	for (size_t i = 0; i < rows; i++) {
-		for (size_t j = 0; j < columns; j++) {
-			file >> matrix(i, j); 
-		}
+	for (size_t i = 0; i <  matrix.size(); i++) {
+    	for (size_t j = 0; j <  matrix.size(); j++) {
+			file >> matrix(i, j);
+		}	
 	}
-
-	file.close();
 
 	return matrix;
 }
@@ -144,10 +120,10 @@ void save_to_file(Matrix<T> matrix, std::string filename) {
     	throw std::exception("Ошибка при открытии файла!");
 	}
 
-  	file << matrix.rows() << " " << matrix.columns() << "\n";
+  	file << matrix.size() << " " << matrix.size() << "\n";
 
-  	for (size_t i = 0; i < matrix.rows(); i++) {
-    	for (size_t j = 0; j < matrix.columns(); j++) {
+  	for (size_t i = 0; i <  matrix.size(); i++) {
+    	for (size_t j = 0; j <  matrix.size(); j++) {
 			file << matrix(i, j) << " ";
 		}	
     	file << "\n";
