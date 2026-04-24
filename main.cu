@@ -52,6 +52,14 @@ void multiply_matrices_cuda(const float* h_a, const float* h_b, float* h_c, size
     cudaFree(d_c);
 }
 
+void save_log(std::ofstream& log, size_t size, auto block_size, auto operations, auto duration) {
+    log << "Размер матриц: " << size << "x" << size << "\n";
+    log << "Число потоков: " << (block_size.x * block_size.y) << "\n";
+    log << "Конфигурация блока: " << block_size.x << "x" << block_size.y << "\n";
+    log << "Объём работы: " << operations << " операций\n";
+    log << "Время выполнения: " << duration.count() << " мс\n\n";
+}
+
 const std::string results_folder = ".\\matrices\\results";
 const std::string matrices_folder = ".\\matrices\\";
 
@@ -67,7 +75,9 @@ int main() {
         dim3(32, 32)
     };
 
-    std::ofstream log("info.txt");
+    std::ofstream log1("info8x8.txt");
+    std::ofstream log2("info16x16.txt");
+    std::ofstream log3("info32x32.txt");
 
     try {
         for (size_t size : sizes) {
@@ -86,18 +96,24 @@ int main() {
                 
                 auto end = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-                log << "Размер матриц: " << size << "x" << size << "\n";
-                log << "Число потоков: " << (block_size.x * block_size.y) << "\n";
-                log << "Конфигурация блока: " << block_size.x << "x" << block_size.y << "\n";
-                log << "Объём работы: " << operations << " операций\n";
-                log << "Время выполнения: " << duration.count() << " мс\n\n";
+                
+                if (block_size.x * block_size.y == 64) {
+                    save_log(log1, size, block_size, operations, duration);
+                } 
+                else if (block_size.x * block_size.y == 256) {
+                    save_log(log2, size, block_size, operations, duration);
+                } 
+                else {
+                    save_log(log3, size, block_size, operations, duration);
+                }
             }
 
             save_to_file(result_cuda, std::format("{}\\result{}x{}.txt", results_folder, size, size));
         }
         
-        log.close();
+        log1.close();
+        log2.close();
+        log3.close();
     }
     catch (std::exception& ex) {
         std::cout << ex.what();
